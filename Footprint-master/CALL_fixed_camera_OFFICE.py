@@ -28,10 +28,12 @@ Filter_Stop = []
 ## Load data from postgres
 db = psycopg2.connect(database=db, user=dbuser, password=dbpassword, host=dbhost, port=dbport)
 
+## extract the floor plan to compare
 cursor = db.cursor()
 cursor.execute("""select * from "osi_office" where name = 'floor';""") ## <== get the floor from the floor plan
 floorPlan = cursor.fetchall()
 
+## extract the camera detail
 cursor = db.cursor()
 cursor.execute("""select * from "osi_camera";""") ## <== get the whole content of fixed lens camera
 ##cursor.execute("""select * from "osi_camera" where type = 'FIXED';""") ## <== get the whole content of fixed lens camera
