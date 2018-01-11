@@ -41,7 +41,7 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1):
 
    ReformPoly = Polygon(((Minx,Maxy),(Maxx,Maxy),(x1,y1),(x2,y1)))
 
-   return PolyRotate
+   return ReformPoly
 
 
 def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bearing, cameraX, cameraY):
