@@ -19,8 +19,9 @@ from shapely.affinity import rotate
 from shapely.wkt import dump
 
 def breakMultiPoly():
-
-   return
+	## this module is created a some polgon creates multipolygon after the clipping
+	
+   pass
 
 
 def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1):
@@ -87,12 +88,11 @@ def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bea
 	y2 = float(cameraY + cameraToTop)
 	polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
 	PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
-	print "before==> "+ str(PolyRotate)
+	
 	## operation to join floorplan with the floor print
 	PolyRotate = floorplanPoly.intersection(PolyRotate).convex_hull
 	PolyRotateB = ReformBackShape(bearingRad,PolyRotate,x2,x1,y1) ## Rotate and adjust the polygon back to 4 corner
-	print "polyboundary=> "+str(PolyRotateB)
-
+	
 	polyText = PolyRotateB.wkt
 	return polyText
 
@@ -123,7 +123,7 @@ def CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,
     y2 = float(cameraY + cameraToTop)
     polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
     PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
-    print "before==> "+ str(PolyRotate)
+    
     ## operation to join floorplan with the floor print
     PolyRotate = floorplanPoly.intersection(PolyRotate).convex_hull
     PolyRotateB = ReformBackShape(bearingRad,PolyRotate,x2,x1,y1) ## Rotate and adjust the polygon back to 4 corner
@@ -179,8 +179,6 @@ for camera in CameraList:
         ## change the viewing angle to |\ <= viewing angle
         polyText = CreateFixedFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
         polystarement = "ST_GeomFromText('"+polyText+"',3857)"
-
-##      print sqlStatement % (camera_UID,polystarement)
         CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
         InsertStatement = """insert into office_footprint(uid,geom) values('%s',%s)"""
         UpdateStatement = """update office_footprint
@@ -204,10 +202,6 @@ for camera in CameraList:
 
         polyTextdOME = CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
         polystarement = "ST_GeomFromText('"+polyTextdOME+"',3857)"
-
-
-##        print sqlStatement % (camera_UID,polystarement)
-
         CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
         InsertStatement = """insert into office_footprint(uid,geom) values('%s',%s)"""
         UpdateStatement = """update office_footprint
