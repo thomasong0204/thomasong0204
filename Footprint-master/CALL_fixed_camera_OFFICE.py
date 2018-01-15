@@ -20,6 +20,7 @@ from shapely.wkt import dump
 
 def breakMultiPoly():
 	## this module is created a some polgon creates multipolygon after the clipping
+    ## not beiong actived at this moment as we don't encounter this issue.
 	
    pass
 
