@@ -62,7 +62,7 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1):
 
 def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bearing, cameraX, cameraY):
 	viewingAngle = (90-float(view_angle)) * math.pi /180
-	FOVWidthAngle = 2*math.atan (sensorWidth/(2*focusLength))
+	FOVWidthAngle = 2*math.atan(sensorWidth/(2*focusLength))
 	FOVHeightAngle = 2*math.atan(sensorHeight/(2*focusLength))
 	bearingRad = (360-bearing)*2*math.pi/360
 	cameraToBottom = cam_height*math.tan(viewingAngle-0.5*FOVWidthAngle)
