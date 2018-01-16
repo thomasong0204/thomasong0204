@@ -17,6 +17,7 @@ from shapely import wkb
 from shapely.geometry import Polygon
 from shapely.affinity import rotate
 from shapely.wkt import dump
+import re
 
 def breakMultiPoly():
 	## this module is created a some polgon creates multipolygon after the clipping
@@ -52,7 +53,10 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1):
 		newx1 = x1
 	## recreate the polygon
 	ReformPoly = Polygon(((Minx,Maxy),(Maxx,Maxy),(newx1,y1),(newx2,y1)))
-	ReformPoly = rotate(ReformPoly,bearingRad,cam_geom,use_radians=True)
+
+    ## Orientate the adjusted footprint with respect to north
+    ## rotation to be done in javascript
+	# ReformPoly = rotate(ReformPoly,bearingRad,cam_geom,use_radians=True)
 	return ReformPoly
 
 
@@ -123,7 +127,7 @@ def CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,
     y1 = float(cameraY + cameraToBottom)
     y2 = float(cameraY + cameraToTop)
     polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
-    PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
+    PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)  
     
     ## operation to join floorplan with the floor print
     PolyRotate = floorplanPoly.intersection(PolyRotate).convex_hull
@@ -137,10 +141,6 @@ dbpassword=""
 dbhost="192.168.8.12"
 dbport="5432"
 
-## load data
-splitwords =[]
-Filter_Stop = []
-
 ## Load data from postgres
 db = psycopg2.connect(database=db, user=dbuser, password=dbpassword, host=dbhost, port=dbport)
 
@@ -149,7 +149,6 @@ cursor = db.cursor()
 cursor.execute("""select geom from "osi_office" where name = 'floor';""") ## <== get the floor from the floor plan
 floorPlan, = cursor.fetchone()
 floorplanPoly = wkb.loads(floorPlan,hex=True)  ## convert the floor geom
-print "floorplanPoly ==> "+ str(floorplanPoly)
 
 
 ## extract the camera detail
@@ -172,55 +171,59 @@ for camera in CameraList:
     cam_geom = wkb.loads(geometry,hex=True)
     ([cameraX],[cameraY]) = cam_geom.xy
 
-
-
 ##    if cameraType == "Network camera":
+
     if cameraType == "FIXED":
 ##        viewingAngle = float(view_angle) * math.pi /180
         ## change the viewing angle to |\ <= viewing angle
         polyText = CreateFixedFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
-        polystarement = "ST_GeomFromText('"+polyText+"',3857)"
+        polyText=str(polyText).replace("POLYGON ((","[")
+        polyText=str(polyText).replace("))","]")
+
+        ## store the polytext as a string instead of a polygon in the camera table.
+        # polystarement = "ST_GeomFromText('"+polyText+"',3857)"
         CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
         InsertStatement = """insert into office_footprint(uid,geom) values('%s',%s)"""
-        UpdateStatement = """update office_footprint
-                                set geom = %s
-                            where uid = '%s';"""
+        UpdateStatement = """update osi_camera
+                                set footprint_str = '%s'
+                            where camera_uid = '%s';"""
 
-        cursor.execute(CheckFootprintExist % (camera_UID))
-        queryList = cursor.fetchone()
-        if queryList[0] <1:
-            ## Insert row
-            cursor.execute(InsertStatement % (camera_UID,polystarement))
-            db.commit()
-            pass
-        else:
-            ## Update row
-            cursor.execute(UpdateStatement % (polystarement,camera_UID))
-            db.commit()
-            pass
+        print "polyText: "+str(polyText)
+        cursor.execute(UpdateStatement % (polyText,camera_UID))
+        db.commit()
+
+        # cursor.execute(CheckFootprintExist % (camera_UID))
+        # queryList = cursor.fetchone()
+        # if queryList[0] <1:
+        #     ## Insert row
+        #     cursor.execute(InsertStatement % (camera_UID,polyText))
+        #     db.commit()
+        #     pass
+        # else:
+        #     ## Update row
+        #     cursor.execute(UpdateStatement % (polyText,camera_UID))
+        #     db.commit()
+        #     pass
 
     elif cameraType == "DOME":
 
         polyTextdOME = CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
         polystarement = "ST_GeomFromText('"+polyTextdOME+"',3857)"
+
+        polyTextdOME=str(polyTextdOME).replace("POLYGON ((","[")
+        polyTextdOME=str(polyTextdOME).replace("))","]")
+
         CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
         InsertStatement = """insert into office_footprint(uid,geom) values('%s',%s)"""
-        UpdateStatement = """update office_footprint
-                                set geom = %s
-                            where uid = '%s';"""
+        UpdateStatement = """update osi_camera
+                                set footprint_str = '%s'
+                            where camera_uid = '%s';"""
 
-        cursor.execute(CheckFootprintExist % (camera_UID))
-        queryList = cursor.fetchone()
-        if queryList[0] <1:
-            ## Insert row
-            cursor.execute(InsertStatement % (camera_UID,polystarement))
-            db.commit()
-            pass
-        else:
-            ## Update row
-            cursor.execute(UpdateStatement % (polystarement,camera_UID))
-            db.commit()
-            pass
+        print "polyTextdOME: "+str(polyTextdOME)
+        cursor.execute(UpdateStatement % (polyTextdOME,camera_UID))
+        db.commit()
+
+    
     else:
         pass
 
