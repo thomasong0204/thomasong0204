@@ -10,7 +10,7 @@
 #-------------------------------------------------------------------------------
 
 
-import urllib2
+
 import math
 import psycopg2
 from shapely import wkb
@@ -22,7 +22,7 @@ import re
 def breakMultiPoly():
 	## this module is created a some polgon creates multipolygon after the clipping
     ## not beiong actived at this moment as we don't encounter this issue.
-	
+
    pass
 
 
@@ -30,7 +30,7 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1):
 ## this is needed to repair the geometry. After clipping, the outline of the feature are changed to more than 4 points
 ## thus, a need to repair to ensure the geometry are back to 4 points.
 	rotateback = 2*math.pi-bearingRad
-	PolyRotate = rotate(PolyRotate,rotateback,cam_geom,use_radians=True)	
+	PolyRotate = rotate(PolyRotate,rotateback,cam_geom,use_radians=True)
 	OldPolyBB = PolyRotate.bounds
 	Minx = OldPolyBB[0]
 	Maxx = OldPolyBB[2]
@@ -54,9 +54,8 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1):
 	## recreate the polygon
 	ReformPoly = Polygon(((Minx,Maxy),(Maxx,Maxy),(newx1,y1),(newx2,y1)))
 
-    ## Orientate the adjusted footprint with respect to north
     ## rotation to be done in javascript
-	# ReformPoly = rotate(ReformPoly,bearingRad,cam_geom,use_radians=True)
+
 	return ReformPoly
 
 
@@ -93,11 +92,11 @@ def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bea
 	y2 = float(cameraY + cameraToTop)
 	polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
 	PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
-	
+
 	## operation to join floorplan with the floor print
 	PolyRotate = floorplanPoly.intersection(PolyRotate).convex_hull
 	PolyRotateB = ReformBackShape(bearingRad,PolyRotate,x2,x1,y1) ## Rotate and adjust the polygon back to 4 corner
-	
+
 	polyText = PolyRotateB.wkt
 	return polyText
 
@@ -127,8 +126,8 @@ def CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,
     y1 = float(cameraY + cameraToBottom)
     y2 = float(cameraY + cameraToTop)
     polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
-    PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)  
-    
+    PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
+
     ## operation to join floorplan with the floor print
     PolyRotate = floorplanPoly.intersection(PolyRotate).convex_hull
     PolyRotateB = ReformBackShape(bearingRad,PolyRotate,x2,x1,y1) ## Rotate and adjust the polygon back to 4 corner
@@ -177,53 +176,57 @@ for camera in CameraList:
 ##        viewingAngle = float(view_angle) * math.pi /180
         ## change the viewing angle to |\ <= viewing angle
         polyText = CreateFixedFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
-        polyText=str(polyText).replace("POLYGON ((","[")
-        polyText=str(polyText).replace("))","]")
+        polyFHolder = []
+        polyText=str(polyText).replace("POLYGON ((","")
+        polyText=str(polyText).replace("))","")
+        polytextList = polyText.split(",")
+        for data in polytextList:
+            cLEANstr = str(data).lstrip(" ")
+            splitstr = str(cLEANstr).split(" ")
+            floatContent = [float(digit) for digit in splitstr]
+            polyFHolder.append(floatContent)
 
-        ## store the polytext as a string instead of a polygon in the camera table.
-        # polystarement = "ST_GeomFromText('"+polyText+"',3857)"
-        CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
-        InsertStatement = """insert into office_footprint(uid,geom) values('%s',%s)"""
+        print polyFHolder
+
+        # CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
         UpdateStatement = """update osi_camera
                                 set footprint_str = '%s'
                             where camera_uid = '%s';"""
 
-        print "polyText: "+str(polyText)
-        cursor.execute(UpdateStatement % (polyText,camera_UID))
+
+        cursor.execute(UpdateStatement % (str(polyFHolder),camera_UID))
         db.commit()
 
-        # cursor.execute(CheckFootprintExist % (camera_UID))
-        # queryList = cursor.fetchone()
-        # if queryList[0] <1:
-        #     ## Insert row
-        #     cursor.execute(InsertStatement % (camera_UID,polyText))
-        #     db.commit()
-        #     pass
-        # else:
-        #     ## Update row
-        #     cursor.execute(UpdateStatement % (polyText,camera_UID))
-        #     db.commit()
-        #     pass
+
 
     elif cameraType == "DOME":
 
         polyTextdOME = CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
-        polystarement = "ST_GeomFromText('"+polyTextdOME+"',3857)"
+        # polystarement = "ST_GeomFromText('"+polyTextdOME+"',3857)"
+        polyHolder = []
+        polyTextdOME=str(polyTextdOME).replace("POLYGON ((","")
+        polyTextdOME=str(polyTextdOME).replace("))","")
+        polytextList = polyTextdOME.split(",")
+        for data in polytextList:
+            cLEANstr = str(data).lstrip(" ")
+            splitstr = str(cLEANstr).split(" ")
+            floatContent = [float(digit) for digit in splitstr]
+            polyHolder.append(floatContent)
 
-        polyTextdOME=str(polyTextdOME).replace("POLYGON ((","[")
-        polyTextdOME=str(polyTextdOME).replace("))","]")
+        print polyHolder
 
-        CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
-        InsertStatement = """insert into office_footprint(uid,geom) values('%s',%s)"""
+        # CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
+        # InsertStatement = """insert into office_footprint(uid,geom) values('%s',%s)"""
         UpdateStatement = """update osi_camera
                                 set footprint_str = '%s'
                             where camera_uid = '%s';"""
+        print "UpdateStatement: "+str(UpdateStatement)
 
-        print "polyTextdOME: "+str(polyTextdOME)
-        cursor.execute(UpdateStatement % (polyTextdOME,camera_UID))
+        cursor.execute(UpdateStatement % (str(polyHolder),camera_UID))
+
         db.commit()
 
-    
+
     else:
         pass
 

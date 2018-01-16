@@ -20,19 +20,13 @@ def getCameraPT(cam_uid):
 
     ## extract the floor plan to compare
     cursor = db.cursor()
-    sqlstring = """select geom,bearing from osi_camera where camera_uid = '%s';"""
+    sqlstring = """select footprint_str,camera_uid from osi_camera;"""
     
-    cursor.execute(sqlstring % (cam_uid)) ## <== get the geometry of the camera
-    camera = cursor.fetchone()
-    print "camera: "+str(camera)
+    cursor.execute(sqlstring % (cam_uid)) ## <== get the geometry of the footprint
+    cameraFP = cursor.fetchall()
+    
 
-    return camera
-
-## get distance from point to camera
-def pointdistance():
-
-
-    return
+    return cameraFP
 
 
 ## using numpy for matrix.abs
@@ -65,7 +59,7 @@ for fp in footprints:
     (polyX,polyY)= readfppolygon.boundary.coords.xy
     ## this is the centre point of the polygon
     ## this will be used in the matrix
-    
+
 
     ## calculate the distance from camera to centroid
     StraightD = readfppolygon.centroid.distance(cameraPT)
